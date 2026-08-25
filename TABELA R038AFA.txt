@@ -1,0 +1,105 @@
+USE [VETORH_PRD]
+GO
+
+/****** Object:  Table [dbo].[r038afa]    Script Date: 8/11/2026 11:09:11 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[r038afa](
+	[numemp] [smallint] NOT NULL,
+	[tipcol] [smallint] NOT NULL,
+	[numcad] [int] NOT NULL,
+	[datafa] [datetime] NOT NULL,
+	[horafa] [int] NOT NULL,
+	[datter] [datetime] NULL,
+	[horter] [int] NULL,
+	[prvter] [datetime] NULL,
+	[sitafa] [smallint] NULL,
+	[caudem] [smallint] NULL,
+	[diajus] [smallint] NULL,
+	[indrem] [smallint] NULL,
+	[fimqua] [datetime] NULL,
+	[qhrafa] [int] NULL,
+	[oriafa] [smallint] NULL,
+	[exmret] [varchar](1) NULL,
+	[contov] [varchar](1) NULL,
+	[obsafa] [varchar](255) NULL,
+	[staatu] [smallint] NULL,
+	[motrai] [smallint] NULL,
+	[nroaut] [varchar](15) NULL,
+	[codoem] [int] NULL,
+	[codsub] [varchar](3) NULL,
+	[datper] [datetime] NULL,
+	[sitini] [smallint] NULL,
+	[risnex] [varchar](1) NULL,
+	[datnex] [datetime] NULL,
+	[diaprv] [smallint] NULL,
+	[codcua] [int] NULL,
+	[tmacua] [int] NULL,
+	[datpar] [datetime] NULL,
+	[diablq] [smallint] NULL,
+	[seqreg] [bigint] NULL,
+	[hrtrcs] [int] NULL,
+	[coddoe] [varchar](4) NULL,
+	[codcid] [varchar](10) NULL,
+	[codate] [int] NULL,
+	[acitra] [smallint] NULL,
+	[eferet] [varchar](1) NULL,
+	[encafa] [smallint] NULL,
+	[tipsuc] [smallint] NULL,
+	[cgcsuc] [bigint] NULL,
+	[datalt] [datetime] NULL,
+	[sitori] [smallint] NULL,
+	[motalt] [varchar](1) NULL,
+	[nomate] [varchar](70) NULL,
+	[orgcla] [smallint] NULL,
+	[regcon] [varchar](14) NULL,
+	[estcon] [varchar](2) NULL,
+	[cgcces] [bigint] NULL,
+	[onuces] [smallint] NULL,
+	[cgcsin] [bigint] NULL,
+	[onusin] [smallint] NULL,
+	[aciant] [varchar](1) NULL,
+	[orimot] [smallint] NULL,
+	[numpro] [int] NULL,
+	[msmmot] [varchar](1) NULL,
+	[cmpau1] [smallint] NULL,
+	[mancgc] [bigint] NULL,
+	[manrem] [varchar](1) NULL,
+	[atepat] [varchar](1) NULL,
+	[cfjsuc] [varchar](14) NULL,
+	[cfjces] [varchar](14) NULL,
+	[cfjsin] [varchar](14) NULL,
+	[cfjmdt] [varchar](14) NULL,
+ CONSTRAINT [cp_r038afa] PRIMARY KEY CLUSTERED 
+(
+	[numemp] ASC,
+	[tipcol] ASC,
+	[numcad] ASC,
+	[datafa] ASC,
+	[horafa] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[r038afa] SET (LOCK_ESCALATION = DISABLE)
+GO
+
+ALTER TABLE [dbo].[r038afa]  WITH CHECK ADD  CONSTRAINT [ir_r038afa_002] FOREIGN KEY([numemp], [tipcol], [numcad])
+REFERENCES [dbo].[r034fun] ([numemp], [tipcol], [numcad])
+GO
+
+ALTER TABLE [dbo].[r038afa] CHECK CONSTRAINT [ir_r038afa_002]
+GO
+
+ALTER TABLE [dbo].[r038afa]  WITH CHECK ADD  CONSTRAINT [ir_r038afa_008] FOREIGN KEY([sitafa])
+REFERENCES [dbo].[r010sit] ([codsit])
+GO
+
+ALTER TABLE [dbo].[r038afa] CHECK CONSTRAINT [ir_r038afa_008]
+GO
+
+
