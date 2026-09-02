@@ -1,0 +1,110 @@
+CREATE VIEW USU_VCRITICACC AS SELECT DISTINCT  
+    T1.NUMEMP,  
+ T9.CODFIL,  
+ T9.NOMFIL,  
+    T1.TIPCOL,  
+    CASE WHEN T1.TIPCON <> 10 THEN 'ADMINISTRATIVO' ELSE 'DOCENTE' END AS TIPCONTRATO,  
+    T1.NUMCAD,  
+    T1.NOMFUN,  
+ T1.DATADM,  
+ T1.SITAFA,  
+ T11.DESSIT,  
+ T10.TITCAR             AS CARGO_FUNC,  
+    T1.CODCCU                                          AS CODCCU_FUNC,  
+    CASE WHEN T5.usu_tipinf <> 'M' THEN 'LEGADO' ELSE 'DYNAMICS' END AS TIPCCU_FUNC,  
+    T5.NOMCCU                                          AS NOMCCU_FUNC,  
+  
+  
+  
+    T2.CODRAT                                          AS CODRAT_GRADE,  
+    CASE WHEN T6.usu_tipinf <> 'M' THEN 'LEGADO' ELSE 'DYNAMICS' END AS TIPCCU_GRADE,  
+    T6.NOMCCU                                          AS NOMCCU_GRADE,  
+    T2.DATINI                                          AS DATINI_GRADE,  
+    T2.DATFIM                                          AS DATFIM_GRADE,  
+  
+    T3.CODCCU                                          AS CODCCU_HISTCCU,  
+    CASE WHEN T7.usu_tipinf <> 'M' THEN 'LEGADO' ELSE 'DYNAMICS' END AS TIPCCU_HISTCCU,  
+    T7.NOMCCU                                          AS NOMCCU_HISTCCU,  
+  
+    T1.POSTRA                                          AS POSTRA,  
+    T4.CODRAT                                          AS CODRAT_POSTO,  
+    T4.CODCCU                                          AS CODCCU_POSTO,  
+    CASE WHEN T8.usu_tipinf <> 'M' THEN 'LEGADO' ELSE 'DYNAMICS' END AS TIPCCU_POSTO,  
+    T8.NOMCCU                                          AS NOMCCU_POSTO,  
+  
+    /* ---------- COLUNA DE CRÍTICA ---------- */  
+    CASE  
+        WHEN UPPER(LTRIM(RTRIM(ISNULL(T5.usu_tipinf,'')))) = 'M'  
+          OR UPPER(LTRIM(RTRIM(ISNULL(T5.usu_tipinf,'')))) = 'M'  
+          OR UPPER(LTRIM(RTRIM(ISNULL(T5.usu_tipinf,'')))) = 'M'  
+          OR UPPER(LTRIM(RTRIM(ISNULL(T5.usu_tipinf,'')))) = 'M'  
+        THEN 0  
+        ELSE 1  
+    END                                                 AS IND_CRITICA_DYNAMICS,  
+  
+    /* ---------- DETALHE: QUAIS FONTES NÃO SÃO DYNAMICS (AUDITORIA) ---------- */  
+    STUFF(  
+        CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(T5.usu_tipinf,'')))) <> 'M' THEN ',FUNC'    ELSE '' END +  
+        CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(T6.usu_tipinf,'')))) <> 'M' THEN ',GRADE'   ELSE '' END +  
+        CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(T7.usu_tipinf,'')))) <> 'M' THEN ',HISTCCU' ELSE '' END +  
+        CASE WHEN UPPER(LTRIM(RTRIM(ISNULL(T8.usu_tipinf,'')))) <> 'M' THEN ',POSTO'   ELSE '' END  
+    , 1, 1, '')                                         AS ORIGENS_SEM_DYNAMICS  
+  
+FROM R034FUN T1  
+  
+LEFT JOIN DBO.R171APF AS T2  
+    ON  T2.NUMEMP = T1.NUMEMP  
+    AND T2.TIPCOL = T1.TIPCOL  
+    AND T2.NUMCAD = T1.NUMCAD  
+    AND (T2.DATFIM > GETDATE() OR T2.DATFIM = '1900-12-31 00:00:00.000')  
+  
+LEFT JOIN R038HCC AS T3  
+    ON T3.NUMEMP = T1.NUMEMP  
+    AND T3.TIPCOL = T1.TIPCOL  
+    AND T3.NUMCAD = T1.NUMCAD  
+    AND T3.DATALT = (SELECT MAX(DATALT) FROM R038HCC HCC WHERE HCC.NUMEMP = T1.NUMEMP AND HCC.TIPCOL = T1.TIPCOL AND HCC.NUMCAD = T1.NUMCAD)  
+  
+LEFT JOIN R017CAR AS T4  
+    ON T4.NUMEMP = T1.NUMEMP  
+    AND T4.ESTPOS = T1.ESTPOS  
+    AND T4.POSTRA = T1.POSTRA  
+    AND T4.DATFIM = (SELECT MAX(DATFIM) FROM R017CAR HCC WHERE HCC.NUMEMP = T1.NUMEMP AND HCC.ESTPOS = T1.ESTPOS AND HCC.POSTRA = T1.POSTRA)  
+  
+LEFT JOIN R018CCU AS T5  
+    ON T5.NUMEMP = T1.NUMEMP  
+    AND T5.CODCCU = T1.CODCCU  
+  
+LEFT JOIN R018CCU AS T6  
+    ON T6.NUMEMP = T2.NUMEMP  
+    AND T6.CODRAT = T2.CODRAT  
+  
+LEFT JOIN R018CCU AS T7  
+    ON T7.NUMEMP = T3.NUMEMP  
+    AND T7.CODCCU = T3.CODCCU  
+  
+LEFT JOIN R018CCU AS T8  
+    ON T8.NUMEMP = T4.NUMEMP  
+    AND T8.CODCCU = T4.CODCCU  
+  
+LEFT JOIN R030FIL AS T9   
+ ON T9.NUMEMP = T1.NUMEMP   
+ AND T9.CODFIL = T1.CODFIL  
+LEFT JOIN R024CAR AS T10   
+ ON T10.ESTCAR = T4.ESTCAR   
+ AND T10.CODCAR = T4.CODCAR  
+  
+LEFT JOIN R010SIT AS T11   
+ ON T11.CODSIT = T1.SITAFA  
+  
+WHERE T1.SITAFA <> 7  
+  AND T1.NUMEMP <> 5  
+  AND T1.TIPCOL <> 2  
+  AND   
+    (CASE  
+        WHEN UPPER(LTRIM(RTRIM(ISNULL(T5.usu_tipinf,'')))) = 'M'  
+          OR UPPER(LTRIM(RTRIM(ISNULL(T5.usu_tipinf,'')))) = 'M'  
+          OR UPPER(LTRIM(RTRIM(ISNULL(T5.usu_tipinf,'')))) = 'M'  
+          OR UPPER(LTRIM(RTRIM(ISNULL(T5.usu_tipinf,'')))) = 'M'  
+        THEN 0  
+        ELSE 1  
+    END) = 1
