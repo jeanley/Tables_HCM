@@ -1,0 +1,53 @@
+USE [VETORH_PRD]
+GO
+
+/****** Object:  Table [dbo].[r018ccu]    Script Date: 9/3/2026 10:17:39 AM ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[r018ccu](
+	[numemp] [smallint] NOT NULL,
+	[codccu] [varchar](18) NOT NULL,
+	[nomccu] [varchar](80) NULL,
+	[filctb] [int] NULL,
+	[filgrp] [int] NULL,
+	[outemp] [smallint] NULL,
+	[outccu] [varchar](18) NULL,
+	[tipcta] [varchar](1) NULL,
+	[codrat] [int] NULL,
+	[ccutxt] [varchar](32) NULL,
+	[datcri] [datetime] NULL,
+	[datext] [datetime] NULL,
+	[codfil] [int] NULL,
+	[posccu] [varchar](24) NULL,
+	[usu_divope] [varchar](10) NULL,
+	[usu_depdyn] [varchar](10) NULL,
+	[codagr] [int] NULL,
+	[usu_visbpm] [varchar](1) NULL,
+	[usu_gloccu] [varchar](1) NULL,
+	[usu_codfil] [int] NULL,
+	[usu_cculeg] [varchar](18) NULL,
+	[usu_ratleg] [int] NULL,
+	[usu_tipinf] [varchar](1) NULL,
+ CONSTRAINT [cp_r018ccu] PRIMARY KEY CLUSTERED 
+(
+	[numemp] ASC,
+	[codccu] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[r018ccu] SET (LOCK_ESCALATION = DISABLE)
+GO
+
+ALTER TABLE [dbo].[r018ccu]  WITH CHECK ADD  CONSTRAINT [ir_r018ccu_000] FOREIGN KEY([numemp])
+REFERENCES [dbo].[r030emp] ([numemp])
+GO
+
+ALTER TABLE [dbo].[r018ccu] CHECK CONSTRAINT [ir_r018ccu_000]
+GO
+
+
