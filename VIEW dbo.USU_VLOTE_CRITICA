@@ -1,0 +1,181 @@
+ALTER VIEW dbo.USU_VLOTE_CRITICA
+AS
+WITH
+-- 1) Lote contábil agregado por Empresa/Filial/Cálculo/Data/Colaborador
+--    (TODOS os CLCs — inclusive provisão/baixa — pois o lote precisa bater
+--    Débito x Crédito no total, incluindo as contrapartidas de provisão)
+LoteAgg AS (
+    SELECT
+        A.NUMEMP, A.CODFIL, A.CODCAL, A.DATLAN, A.TIPCOL, A.NUMCAD,
+        DATEFROMPARTS(YEAR(CAL.PERREF), MONTH(CAL.PERREF), 1)          AS Competencia,
+        COUNT(*)                                                       AS QtdLancamentos,
+        SUM(A.VALLAN)                                                  AS ValorTotalLote,
+        SUM(CASE WHEN A.DEBCRE = 'D' THEN A.VALLAN ELSE 0 END)         AS TotalDebito,
+        SUM(CASE WHEN A.DEBCRE = 'C' THEN A.VALLAN * -1 ELSE 0 END)    AS TotalCredito
+    FROM dbo.R048CTB A
+    JOIN dbo.R044CAL CAL
+        ON CAL.NUMEMP = A.NUMEMP AND CAL.CODCAL = A.CODCAL AND CAL.inicmp >= '2025-08-01'
+    WHERE A.CONGER = '0'
+      AND EXISTS (
+            SELECT 1 FROM dbo.R048CLC B
+            WHERE B.TABEVE = A.TABEVE AND B.CODCLC = A.CODCLC
+          )
+    GROUP BY A.NUMEMP, A.CODFIL, A.CODCAL, A.DATLAN, A.TIPCOL, A.NUMCAD,
+             DATEFROMPARTS(YEAR(CAL.PERREF), MONTH(CAL.PERREF), 1)
+),
+
+-- 2) Lote SEM as contas padrão de Ajuste de Provisão/Baixa (CLC 1201-1697),
+--    por Empresa/Colaborador/Cálculo (sem granularidade de DATLAN) — usada
+--    exclusivamente para a comparação com a Ficha Financeira, evitando que
+--    lançamentos puramente contábeis de provisão (sem evento de folha
+--    correspondente) sejam tratados como divergência de "sem Ficha".
+--    CONFIRMAR faixa com o time contábil se mudar o padrão de CLCs.
+LoteNaoProvisao AS (
+    SELECT DISTINCT A.NUMEMP, A.TIPCOL, A.NUMCAD, A.CODCAL
+    FROM dbo.R048CTB A
+    JOIN dbo.R044CAL CAL
+        ON CAL.NUMEMP = A.NUMEMP AND CAL.CODCAL = A.CODCAL AND CAL.inicmp >= '2025-08-01'
+    WHERE A.CONGER = '0'
+      AND EXISTS (
+            SELECT 1 FROM dbo.R048CLC B
+            WHERE B.TABEVE = A.TABEVE AND B.CODCLC = A.CODCLC
+          )
+      AND A.CODCLC NOT BETWEEN 1201 AND 1697
+),
+
+-- 3) Ficha Financeira agregada por Empresa/Colaborador/Cálculo, com valor
+--    total para permitir comparação com o Lote
+FichaAgg AS (
+    SELECT
+        F.NUMEMP, F.TIPCOL, F.NUMCAD, F.CODCAL,
+        DATEFROMPARTS(YEAR(CAL.PERREF), MONTH(CAL.PERREF), 1)          AS Competencia,
+        SUM(F.VALEVE)                                                  AS ValorTotalFicha,
+        COUNT(*)                                                       AS QtdEventosFicha
+    FROM dbo.R046FFR F
+    JOIN dbo.R044CAL CAL
+        ON CAL.NUMEMP = F.NUMEMP AND CAL.CODCAL = F.CODCAL AND CAL.inicmp >= '2025-08-01'
+    GROUP BY F.NUMEMP, F.TIPCOL, F.NUMCAD, F.CODCAL,
+             DATEFROMPARTS(YEAR(CAL.PERREF), MONTH(CAL.PERREF), 1)
+),
+
+CCCriticaAgg AS (
+    SELECT
+        NUMEMP, TIPCOL, NUMCAD,
+        MAX(IND_CRITICA_DYNAMICS)               AS FlagCCForaPadrao,
+        STRING_AGG(ORIGENS_SEM_DYNAMICS, ' | ')  AS DetalheOrigensCC
+    FROM dbo.USU_VCRITICACC
+    GROUP BY NUMEMP, TIPCOL, NUMCAD
+),
+
+ProvisaoPorCompetencia AS (
+    SELECT DISTINCT NUMEMP, TIPCOL, NUMCAD, CAST(MESANO AS DATE) AS MesAno
+    FROM dbo.R146PRR
+    WHERE CAST(MESANO AS DATE) >= '2025-08-01'
+)
+
+-- ==========================================================================
+-- PARTE 1: linhas com base no LOTE (débito/crédito por DATLAN + CC + Provisão
+--          + checagem de Ficha por CODCAL, ignorando lançamentos de
+--          provisão/baixa puros para esta última checagem)
+-- ==========================================================================
+SELECT
+    L.NUMEMP,
+    CASE L.NUMEMP WHEN 1 THEN 'ABEC' WHEN 2 THEN 'SOME' WHEN 3 THEN 'UBEE' WHEN 4 THEN 'UNBEC'
+         ELSE CAST(L.NUMEMP AS VARCHAR(10)) END                       AS Mantenedora,
+    L.CODFIL,
+    FIL.NOMFIL,
+    L.CODCAL,
+    L.Competencia,
+    L.DATLAN,
+    L.TIPCOL,
+    L.NUMCAD,
+    FUN.NOMFUN,
+    FUN.TIPCON,
+    L.QtdLancamentos,
+    L.ValorTotalLote,
+    L.TotalDebito,
+    L.TotalCredito,
+    (L.TotalCredito - (L.TotalDebito * -1))                        AS DiferencaDebitoCredito,
+    CASE WHEN L.TotalCredito <> (L.TotalDebito * -1) THEN 1 ELSE 0 END AS FlagDivergenciaDebCred,
+    ISNULL(CC.FlagCCForaPadrao, 0)                                 AS FlagCCForaPadrao,
+    CC.DetalheOrigensCC,
+    -- Só considera "sem Ficha" quando existe lançamento REAL (não provisão/
+    -- baixa) neste CODCAL para o colaborador; senão a checagem não se aplica
+    CASE WHEN LNP.NUMEMP IS NOT NULL AND FA.NUMEMP IS NULL THEN 1 ELSE 0 END AS FlagSemFichaFinanceira,
+    FA.ValorTotalFicha,
+    CASE WHEN FA.NUMEMP IS NOT NULL THEN L.ValorTotalLote - FA.ValorTotalFicha END AS DifValorLoteFicha,
+    0                                                               AS FlagSemLoteContabil,
+    CASE WHEN PR.NUMEMP IS NULL THEN 1 ELSE 0 END                  AS FlagSemProvisaoNaCompetencia,
+    'LOTE'                                                          AS OrigemRegistro,
+    STUFF(
+        CASE WHEN L.TotalCredito <> (L.TotalDebito * -1) THEN ',Diferença Débito/Crédito' ELSE '' END +
+        CASE WHEN ISNULL(CC.FlagCCForaPadrao,0) = 1 THEN ',Centro de Custo Fora do Padrão' ELSE '' END +
+        CASE WHEN LNP.NUMEMP IS NOT NULL AND FA.NUMEMP IS NULL THEN ',CODCAL no Lote sem Ficha Financeira' ELSE '' END +
+        CASE WHEN PR.NUMEMP IS NULL THEN ',Sem Provisão na Competência' ELSE '' END
+    , 1, 1, '')                                                     AS TipoCritica,
+    CASE
+        WHEN L.TotalCredito <> (L.TotalDebito * -1)
+          OR ISNULL(CC.FlagCCForaPadrao,0) = 1
+          OR (LNP.NUMEMP IS NOT NULL AND FA.NUMEMP IS NULL)
+          OR PR.NUMEMP IS NULL
+        THEN 'DIVERGENTE' ELSE 'OK'
+    END                                                             AS StatusGeral
+FROM LoteAgg L
+LEFT JOIN dbo.R030FIL FIL ON FIL.NUMEMP = L.NUMEMP AND FIL.CODFIL = L.CODFIL
+LEFT JOIN dbo.R034FUN FUN ON FUN.NUMEMP = L.NUMEMP AND FUN.TIPCOL = L.TIPCOL AND FUN.NUMCAD = L.NUMCAD
+LEFT JOIN FichaAgg FA ON FA.NUMEMP = L.NUMEMP AND FA.TIPCOL = L.TIPCOL AND FA.NUMCAD = L.NUMCAD AND FA.CODCAL = L.CODCAL
+LEFT JOIN LoteNaoProvisao LNP ON LNP.NUMEMP = L.NUMEMP AND LNP.TIPCOL = L.TIPCOL AND LNP.NUMCAD = L.NUMCAD AND LNP.CODCAL = L.CODCAL
+LEFT JOIN CCCriticaAgg CC ON CC.NUMEMP = L.NUMEMP AND CC.TIPCOL = L.TIPCOL AND CC.NUMCAD = L.NUMCAD
+LEFT JOIN ProvisaoPorCompetencia PR ON PR.NUMEMP = L.NUMEMP AND PR.TIPCOL = L.TIPCOL AND PR.NUMCAD = L.NUMCAD AND PR.MesAno = L.Competencia
+
+UNION ALL
+
+-- ==========================================================================
+-- PARTE 2: linhas com base na FICHA FINANCEIRA que NÃO TÊM nenhum lançamento
+--          REAL (não-provisão) correspondente no Lote
+-- ==========================================================================
+SELECT
+    FA.NUMEMP,
+    CASE FA.NUMEMP WHEN 1 THEN 'ABEC' WHEN 2 THEN 'SOME' WHEN 3 THEN 'UBEE' WHEN 4 THEN 'UNBEC'
+         ELSE CAST(FA.NUMEMP AS VARCHAR(10)) END                      AS Mantenedora,
+    FUN.CODFIL,
+    FIL.NOMFIL,
+    FA.CODCAL,
+    FA.Competencia,
+    CAST(NULL AS DATETIME)                                         AS DATLAN,
+    FA.TIPCOL,
+    FA.NUMCAD,
+    FUN.NOMFUN,
+    FUN.TIPCON,
+    CAST(NULL AS INT)                                              AS QtdLancamentos,
+    CAST(NULL AS DECIMAL(18,2))                                    AS ValorTotalLote,
+    CAST(NULL AS DECIMAL(18,2))                                    AS TotalDebito,
+    CAST(NULL AS DECIMAL(18,2))                                    AS TotalCredito,
+    CAST(NULL AS DECIMAL(18,2))                                    AS DiferencaDebitoCredito,
+    0                                                               AS FlagDivergenciaDebCred,
+    ISNULL(CC.FlagCCForaPadrao, 0)                                 AS FlagCCForaPadrao,
+    CC.DetalheOrigensCC,
+    0                                                               AS FlagSemFichaFinanceira,
+    FA.ValorTotalFicha,
+    CAST(NULL AS DECIMAL(18,2))                                    AS DifValorLoteFicha,
+    1                                                               AS FlagSemLoteContabil,
+    CASE WHEN PR.NUMEMP IS NULL THEN 1 ELSE 0 END                  AS FlagSemProvisaoNaCompetencia,
+    'FICHA'                                                         AS OrigemRegistro,
+    STUFF(
+        ',CODCAL na Ficha Financeira sem Lançamento no Lote Contábil' +
+        CASE WHEN ISNULL(CC.FlagCCForaPadrao,0) = 1 THEN ',Centro de Custo Fora do Padrão' ELSE '' END +
+        CASE WHEN PR.NUMEMP IS NULL THEN ',Sem Provisão na Competência' ELSE '' END
+    , 1, 1, '')                                                     AS TipoCritica,
+    'DIVERGENTE'                                                    AS StatusGeral
+FROM FichaAgg FA
+LEFT JOIN dbo.R034FUN FUN ON FUN.NUMEMP = FA.NUMEMP AND FUN.TIPCOL = FA.TIPCOL AND FUN.NUMCAD = FA.NUMCAD
+LEFT JOIN dbo.R030FIL FIL ON FIL.NUMEMP = FA.NUMEMP AND FIL.CODFIL = FUN.CODFIL
+LEFT JOIN CCCriticaAgg CC ON CC.NUMEMP = FA.NUMEMP AND CC.TIPCOL = FA.TIPCOL AND CC.NUMCAD = FA.NUMCAD
+LEFT JOIN ProvisaoPorCompetencia PR ON PR.NUMEMP = FA.NUMEMP AND PR.TIPCOL = FA.TIPCOL AND PR.NUMCAD = FA.NUMCAD AND PR.MesAno = FA.Competencia
+WHERE NOT EXISTS (
+    -- agora usa LoteNaoProvisao: colaborador cujo único lançamento no lote
+    -- (para este CODCAL) seja provisão/baixa continua contando como
+    -- "sem Lote" de fato, pois não houve lançamento real de folha
+    SELECT 1 FROM LoteNaoProvisao LNP
+    WHERE LNP.NUMEMP = FA.NUMEMP AND LNP.TIPCOL = FA.TIPCOL AND LNP.NUMCAD = FA.NUMCAD AND LNP.CODCAL = FA.CODCAL
+);
