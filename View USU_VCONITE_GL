@@ -1,0 +1,59 @@
+CREATE VIEW USU_VCONITE_GL AS select    
+CAST(  
+   FORMAT(c.usu_codfilleg,'000')  
++ FORMAT(a.codcal,'0000')  
++ '01'  
+AS BIGINT) AS ID,  
+ROW_NUMBER() OVER (PARTITION BY c.usu_codfilleg, a.codcal ORDER BY a.datlan) SequenciaLLcto,  
+CASE WHEN a.debcre = 'D'  THEN a.condeb ELSE a.concre END Analitica,  
+1 EmpAnalit,  
+0 FilAnalit,  
+a.DATLAN DATA,  
+CASE  
+  WHEN a.debcre = 'D' THEN   
+    CASE WHEN a.condeb LIKE '3%' THEN 1 ELSE NULL END  
+  ELSE   
+    CASE WHEN a.concre LIKE '3%' THEN 1 ELSE NULL END  
+END EmpCCust,  
+CASE  
+  WHEN a.debcre = 'D' THEN   
+    CASE WHEN a.condeb LIKE '3%' THEN 0 ELSE NULL END  
+  ELSE   
+    CASE WHEN a.concre LIKE '3%' THEN 0 ELSE NULL END  
+END FilCCust,  
+CASE  
+  WHEN a.debcre = 'D' THEN   
+    CASE WHEN a.condeb LIKE '3%' THEN a.ccurat ELSE NULL END  
+  ELSE   
+    CASE WHEN a.concre LIKE '3%' THEN a.ccurat ELSE NULL END  
+END CentroCustos,  
+1 EmpHPadr,  
+0 FilHPadr,  
+1 HistPadrao,  
+a.CPLHIS HistCompleto,  
+case when a.debcre = 'D'  
+      then sum(a.vallan)  
+     ELSE sum(a.vallan)*-1 END VALOR,   
+NULL Cobranca  
+from r048ctb a,  
+     r048clc b,  
+     USU_TFILLEG c  
+where a.numemp in (3,4)   
+  and a.tabeve = b.tabeve  
+  and a.codclc = b.codclc  
+  and c.usu_numemp = a.numemp  
+  and c.usu_codfil = a.codfil  
+  and c.usu_legado = 'G'  
+  and a.conger = '0'  
+  group by  
+  c.usu_codfilleg,  
+  c.usu_numempleg,  
+  a.numemp,  
+  a.codcal,  
+  a.filctb,  
+  a.condeb,  
+  a.ccurat,  
+  a.cplhis,  
+  a.datlan,  
+  a.debcre,  
+  a.concre
