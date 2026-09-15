@@ -1,0 +1,71 @@
+• 9 Numérico (mantém os zeros a esquerda do valor) 
+• Z Numérico (não mostra os zeros a esquerda do valor). 
+• A Caracter Alfanumérico (permite letras maúsculas e minúsculas) 
+• U Caracter Maiúsculo
+• L Caracter Minúsculo 
+• DD Dia 
+• MM Mês 
+• YYYY Ano 
+• mm Minuto 
+• hh Hora 
+• C Caracter (não permite símbolos e pontuações)
+
+Diretivas:
+• < Indica que a edição deve ser processada da direita para a esquerda. 
+	Ex. #<# 999.999 
+		-> Indica que a edição deve ser processada da esquerda
+		para a direita. Ex. #># 9.9999 
+• b Montra brancos se for tudo Zerado no conteúdo, e sem mostrar a 
+máscara. 
+
+• n Se o conteúdo for Zerado, mostrará a máscara vazia. 
+
+• - Permite mostrar o sinal de menos para os campos que contenham 
+valores negativos. 
+
+• M indica que o valor apesar de ser do tipo Dinheiro a formatação do 
+campo será o mesmo do tipo Numérico. 
+
+• V oculta a vírgula de um valor. Exemplo: #V2#99999,99 -> 12234,76 = 1223476 
+
+• [ ] indica o inicio e o fim de um campo do tipo especial. Entre este [ e o caracter ]
+deve ser colocado o nome do especial desejado. 
+
+• W Oculta os caracteres especiais da descrição de um campo cadastro. 
+Exemplo: #W#AAAAAAA -> “Edição” = “Edicao".
+
+Alfanuméricas - Cadeia de Caracteres, Permite A,L,U,Z,9 e qualquer outro tipo de 
+caracter especial. Exemplo 
+ (z99)999-99999
+ AAA-UUU-LLL 
+ ULLLLLLLLLLLLLLLL
+ 
+ Numéricas - Permite Z,9 e os seguintes caracteres especiais. .,/ ,: ,(, ), [, ]. 
+Exemplo: 
+• (z99)999-99999 
+
+• #-<b# 9999999 permite digitar o valor negativo, caso o valor seja 
+zero, nada aparecerá. 
+
+• zzz.zzz.zz9
+
+Datas - Permite D,M,Y com caracteres especiais / ou -. Exemplo: 
+• DD/MM/YY data simples 
+• DD-MM-YYYY data com ano completo 
+• MM/YY para competência simples 
+• MM/YYYY para competência com ano completo. 
+• #b#DD/MM/YY se a data for zerada brancos serão mostrados. 
+• #n#DD/MM/YY se a data for zerada será mostrado o seguinte / / .
+ 
+Dinheiro ou Valor - Permite z,9 com caracteres especiais ‘/’ - ‘.’ - ‘,’. 
+Exemplo: 
+• #-# ZZZ.ZZZ.ZZ9,99 aceita valor negativo inserindo o sinal de menos 
+a direita do valor; 
+
+ #-2# ZZZ.ZZZ.ZZ9,99 aceita valor negativo inserindo o sinal de menos 
+a esquerda do valor; 
+
+• 99999.9999,99 preenche com zeros a esquerda do valor; 
+
+• 99999999 neste caso a edição será processada como sendo um tipo 
+numérico;
